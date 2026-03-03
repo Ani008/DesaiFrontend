@@ -17,14 +17,13 @@ const DonorTable = ({ projects = [], surgeries = [] }) => {
   const [filter, setFilter] = useState("monthly");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [appliedFilter, setAppliedFilter] = useState({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
-  });
+  const [appliedFilter, setAppliedFilter] = useState(null);
 
   const now = new Date();
 
   const isWithinFilter = (dateString) => {
+    
+    if (!appliedFilter) return true;
     if (!dateString) return false;
 
     // Convert DB format to ISO format
@@ -227,18 +226,25 @@ const DonorTable = ({ projects = [], surgeries = [] }) => {
 
           <tbody>
             {projects.map((project) => {
-              const target = project.balanceSurgery;
+              // ✅ Lifetime completed surgeries
+              const lifetimeCompleted = surgeries.filter(
+                (s) => s.projectId === project.id,
+              ).length;
 
+              // ✅ FIXED TARGET
+              const target = (project.balanceSurgery || 0) + lifetimeCompleted;
+
+              // ✅ Monthly completed (filter based)
               const completed = surgeries.filter(
                 (s) =>
                   s.projectId === project.id && isWithinFilter(s.dateOfSurgery),
               ).length;
 
+              // ✅ Remaining from TARGET
               const incomplete = Math.max(target - completed, 0);
 
               const isCompleted = completed >= target;
 
-              // Accumulate totals
               totalTarget += target;
               totalCompleted += completed;
               totalIncomplete += incomplete;
