@@ -1,6 +1,8 @@
 import { useState } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -14,28 +16,49 @@ const formatDate = (date) => {
 };
 
 const DonorTable = ({ projects = [], surgeries = [] }) => {
-  const [filter, setFilter] = useState("monthly");
+  const [filterType, setFilterType] = useState("monthly");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [appliedFilter, setAppliedFilter] = useState(null);
 
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+
   const now = new Date();
 
   const isWithinFilter = (dateString) => {
-    
     if (!appliedFilter) return true;
     if (!dateString) return false;
 
-    // Convert DB format to ISO format
     const formattedDate = dateString.replace(" ", "T");
     const d = new Date(formattedDate);
+    const now = new Date();
 
     if (isNaN(d)) return false;
+    d.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
 
-    return (
-      d.getFullYear() === appliedFilter.year &&
-      d.getMonth() + 1 === appliedFilter.month
-    );
+    if (appliedFilter.type === "weekly") {
+      const start = new Date(appliedFilter.startDate);
+      const end = new Date(appliedFilter.endDate);
+
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return d >= start && d <= end;
+    }
+
+    if (appliedFilter.type === "monthly") {
+      return (
+        d.getFullYear() === appliedFilter.year &&
+        d.getMonth() + 1 === appliedFilter.month
+      );
+    }
+
+    if (appliedFilter.type === "yearly") {
+      return d.getFullYear() === appliedFilter.year;
+    }
+
+    return true;
   };
 
   // Totals
@@ -141,24 +164,107 @@ const DonorTable = ({ projects = [], surgeries = [] }) => {
   };
 
   const handleFind = () => {
-    setAppliedFilter({
-      year: selectedYear,
-      month: selectedMonth,
-    });
+    if (filterType === "weekly") {
+      setAppliedFilter({
+        type: "weekly",
+        startDate,
+        endDate,
+      });
+    }
+    if (filterType === "monthly") {
+      setAppliedFilter({
+        type: "monthly",
+        year: selectedYear,
+        month: selectedMonth,
+      });
+    }
+
+    if (filterType === "yearly") {
+      setAppliedFilter({
+        type: "yearly",
+        year: selectedYear,
+      });
+    }
   };
 
   return (
     <div className="bg-white rounded-xl shadow p-6">
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Donor Contributions</h3>
+      {/* HEADER */}
+      <div className="mb-6 space-y-4">
+        {/* TITLE + FILTER TYPE */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h3 className="text-xl font-semibold text-gray-800">
+            Donor Contributions
+          </h3>
 
-        <div className="flex items-center gap-3 relative">
-          {/* YEAR DROPDOWN */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setFilterType("weekly")}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition
+        ${
+          filterType === "weekly"
+            ? "bg-blue-600 text-white shadow"
+            : "bg-gray-200 hover:bg-gray-300"
+        }`}
+            >
+              Weekly
+            </button>
+
+            <button
+              onClick={() => setFilterType("monthly")}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition
+        ${
+          filterType === "monthly"
+            ? "bg-blue-600 text-white shadow"
+            : "bg-gray-200 hover:bg-gray-300"
+        }`}
+            >
+              Monthly
+            </button>
+
+            <button
+              onClick={() => setFilterType("yearly")}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition
+        ${
+          filterType === "yearly"
+            ? "bg-blue-600 text-white shadow"
+            : "bg-gray-200 hover:bg-gray-300"
+        }`}
+            >
+              Yearly
+            </button>
+          </div>
+        </div>
+
+        {/* FILTER CONTROLS */}
+        <div className="flex items-center flex-wrap gap-3">
+          {/* DATE RANGE */}
+          <DatePicker
+            selected={startDate}
+            onChange={(date) => setStartDate(date)}
+            placeholderText="Start date"
+            dateFormat="dd/MM/yyyy"
+            disabled={filterType !== "weekly"}
+            className={`border px-3 py-1.5 rounded-md text-sm${filterType !== "weekly" ? "bg-gray-100 cursor-not-allowed" : ""}`}
+          />
+
+          <DatePicker
+            selected={endDate}
+            onChange={(date) => setEndDate(date)}
+            placeholderText="End date"
+            dateFormat="dd/MM/yyyy"
+            disabled={filterType !== "weekly"}
+            className={`border px-3 py-1.5 rounded-md text-sm${filterType !== "weekly" ? "bg-gray-100 cursor-not-allowed" : ""}`}
+          />
+
+          {/* YEAR */}
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="border rounded-md px-3 py-1 text-sm"
+            disabled={filterType === "weekly"}
+            className={`border border-gray-300 rounded-md px-3 py-1.5 text-sm
+      ${filterType === "weekly" ? "bg-gray-100 cursor-not-allowed" : ""}`}
           >
             {[2020, 2021, 2022, 2023, 2024, 2025, 2026].map((year) => (
               <option key={year} value={year}>
@@ -167,11 +273,13 @@ const DonorTable = ({ projects = [], surgeries = [] }) => {
             ))}
           </select>
 
-          {/* MONTH DROPDOWN */}
+          {/* MONTH */}
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="border rounded-md px-3 py-1 text-sm"
+            disabled={filterType === "weekly"}
+            className={`border border-gray-300 rounded-md px-3 py-1.5 text-sm
+      ${filterType === "weekly" ? "bg-gray-100 cursor-not-allowed" : ""}`}
           >
             {[
               "January",
@@ -193,23 +301,25 @@ const DonorTable = ({ projects = [], surgeries = [] }) => {
             ))}
           </select>
 
-          {/* FIND BUTTON */}
+          {/* SEARCH */}
           <button
             onClick={handleFind}
-            className="bg-green-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-green-700"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-md text-sm font-medium shadow-sm"
           >
-            Find
+            Search
           </button>
 
-          {/* PRINT BUTTON */}
+          {/* PRINT */}
           <button
             onClick={handlePrint}
-            className="bg-blue-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm font-medium shadow-sm"
           >
             Print
           </button>
         </div>
       </div>
+
+      <div className="border-b pb-4 mb-4"></div>
 
       {/* TABLE */}
       <div className="overflow-x-auto">

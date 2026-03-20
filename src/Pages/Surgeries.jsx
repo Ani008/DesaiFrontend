@@ -352,7 +352,7 @@ export default function Surgeries() {
                                   <td className="border px-3 py-2">
                                     {new Date(
                                       s.dateOfSurgery,
-                                    ).toLocaleDateString()}
+                                    ).toLocaleDateString("en-GB")}
                                   </td>
                                   <td className="border px-3 py-2">
                                     {s.contactNo}
@@ -413,7 +413,9 @@ export default function Surgeries() {
                             {batches[project.id].map((b) => (
                               <tr key={b.id}>
                                 <td className="border px-3 py-2">
-                                  {new Date(b.batchDate).toLocaleDateString()}
+                                  {new Date(b.batchDate).toLocaleDateString(
+                                    "en-IN",
+                                  )}
                                 </td>
                                 <td className="border px-3 py-2">
                                   {b.completedCount}
