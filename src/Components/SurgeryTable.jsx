@@ -15,7 +15,7 @@ const formatDate = (date) => {
   return `${day}-${month}-${year}`;
 };
 
-const DonorTable = ({ projects = [], surgeries = [] }) => {
+const DonorTable = ({ projects = [], surgeries = []}) => {
   const [filterType, setFilterType] = useState("monthly");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
